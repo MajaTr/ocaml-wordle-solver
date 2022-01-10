@@ -9,3 +9,5 @@ val guessed : t -> bool
 val display_string : t -> guess:string -> string
 
 val to_int : t -> int
+
+include Comparable.S with type t := t
