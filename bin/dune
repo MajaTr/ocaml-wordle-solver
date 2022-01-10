@@ -1,0 +1,5 @@
+(executable
+ (public_name wordle_solver)
+ (name main)
+ (libraries wordle_solver)
+(preprocess (pps ppx_jane)))
