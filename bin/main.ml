@@ -29,67 +29,103 @@ let env_parser =
     let env_words = Filename.concat data_folder "env_words.txt" in
     Environment.import ~filename:env_words ~word_length ~sampled_num)
 
-let load_sexp_player filename =
-  if String.is_suffix filename ~suffix:".sexp" then
-    Sexp.load_sexp filename |> Game_tree.t_of_sexp |> Game_tree.to_player
-    |> Option.some
-  else None
+module Player_type = struct
+  open Option.Let_syntax
+
+  module Split = struct
+    type t = Entropy
+
+    let of_string = function "entropy" -> Some Entropy | _ -> None
+
+    let eval = function Entropy -> (module Entropy_split : Splitter.S)
+  end
+
+  module Auto = struct
+    type t = Split of Split.t
+
+    let of_string s =
+      match%bind String.lsplit2 s ~on:'-' with
+      | "split", tail ->
+          let%map split = Split.of_string tail in
+          Split split
+      | _, _ -> None
+
+    let eval = function
+      | Split split ->
+          (module Splitter.Make ((val Split.eval split)) : Player.S)
+  end
+
+  type t = Human | Auto of Auto.t | Sexp of Filename.t
+
+  let of_string s =
+    List.fold ~init:None ~f:Option.first_some
+      [
+        (match s with "human" -> Some Human | _ -> None);
+        (match%bind String.lsplit2 s ~on:'-' with
+        | "auto", tail ->
+            let%map auto = Auto.of_string tail in
+            Auto auto
+        | _ -> None);
+        Option.some_if (String.is_suffix s ~suffix:".sexp") (Sexp s);
+      ]
+
+  let of_string_exn s = of_string s |> Option.value_exn
+
+  let arg_type = Command.Arg_type.create of_string_exn
+
+  let eval ?(with_printing = false) s =
+    let apply_printing (module M : Player.S) =
+      if with_printing then (module Player.With_printing (M) : Player.S)
+      else (module M)
+    in
+    match s with
+    | Human -> (module Human_play : Player.S)
+    | Auto auto -> Auto.eval auto |> apply_printing
+    | Sexp filename ->
+        Sexp.load_sexp filename |> Game_tree.t_of_sexp |> Game_tree.to_player
+        |> apply_printing
+end
 
 let play_cmd =
   Command.basic ~summary:"Let the computer play"
     Command.Let_syntax.(
       let%map_open env = env_parser
-      and player_name =
-        flag "--player" (required string) ~doc:"the type of player"
+      and player_type =
+        flag "--player"
+          (required Player_type.arg_type)
+          ~doc:"the type of player"
       and hidden = flag "--hidden" (optional string) ~doc:"the hidden word" in
       fun () ->
         let hidden = Option.value hidden ~default:(Environment.sample env) in
-        let player =
-          match player_name with
-          | "human" -> (module Human_play : Player.S)
-          | "entropy" ->
-              (module Player.With_printing (Entropy_splitter) : Player.S)
-          | _ ->
-              let player = Option.value_exn (load_sexp_player player_name) in
-              (module Player.With_printing ((val player : Player.S)) : Player.S)
-        in
-
-        Player.play player env ~hidden)
+        Player.play
+          (Player_type.eval ~with_printing:true player_type)
+          env ~hidden)
 
 let make_tree_cmd =
   Command.basic ~summary:"Save a game tree"
     Command.Let_syntax.(
       let%map_open env = env_parser
-      and player_name =
-        flag "--player" (required string) ~doc:"the type of player"
+      and player_type =
+        flag "--player"
+          (required Player_type.arg_type)
+          ~doc:"the type of player"
       and out_file =
         flag "-o" (required Filename.arg_type) ~doc:"output file"
       in
       fun () ->
-        let player =
-          match player_name with
-          | "entropy" -> (module Entropy_splitter : Player.S)
-          | _ -> failwith "no such player"
-        in
-        print_endline "ok";
-        let tree = Game_tree.make player env in
+        let tree = Game_tree.make (Player_type.eval player_type) env in
         Game_tree.sexp_of_t tree |> Sexp.save out_file)
 
 let cheat_cmd =
   Command.basic ~summary:"Cheat in wordle with a computer player"
     Command.Let_syntax.(
       let%map_open env = env_parser
-      and player_name =
-        flag "--player" (required string) ~doc:"the type of player"
+      and player_type =
+        flag "--player"
+          (required Player_type.arg_type)
+          ~doc:"the type of player"
       in
-      fun () ->
-        let player =
-          match player_name with
-          | "entropy" -> (module Entropy_splitter : Player.S)
-          | _ -> Option.value_exn (load_sexp_player player_name)
-        in
-
-        Player.cheat player env)
+      fun () -> Player.cheat (Player_type.eval player_type) env)
 
 let adhoc_cmd =
   Command.basic ~summary:"Ad-hoc command to save the word list in a good format"
