@@ -12,7 +12,7 @@ module With_printing (M : S) = struct
     res
 
   let update s ~guess ~result =
-    print_endline (Guess_result.display_string result ~guess);
+    print_endline (Guess_result.to_string result);
     M.update s ~guess ~result
 end
 
@@ -30,5 +30,16 @@ let play (module M : S) env ~hidden =
       if Guess_result.guessed result then print_endline "Guessed correctly!"
       else loop new_state
   in
+  loop (M.init env)
 
+let cheat (module M : S) env =
+  let rec loop state =
+    let guess = M.guess state in
+    print_endline guess;
+    let result =
+      In_channel.(input_line stdin)
+      |> Option.value_exn |> Guess_result.of_string |> Option.value_exn
+    in
+    loop (M.update state ~guess ~result)
+  in
   loop (M.init env)

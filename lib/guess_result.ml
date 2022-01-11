@@ -70,9 +70,21 @@ module T = struct
 
   let guessed t = Packed_vector.for_all t ~f:(fun x -> Poly.(x = Green))
 
-  let display_string t ~guess:_ =
+  let to_string t =
     Packed_vector.fold t ~init:"" ~f:(fun s x ->
         s ^ (Char_result.to_char x |> Char.to_string))
+
+  let of_string s =
+    let exception Wrong_letter in
+    try
+      Packed_vector.init (String.length s) ~f:(fun i ->
+          match s.[i] with
+          | '_' -> None
+          | 'Y' -> Yellow
+          | 'G' -> Green
+          | _ -> raise Wrong_letter)
+      |> Option.some
+    with Wrong_letter -> None
 
   let to_int t = t
 end

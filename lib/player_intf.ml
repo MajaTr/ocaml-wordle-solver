@@ -16,4 +16,6 @@ module type Intf = sig
   module With_printing (M : S) : S
 
   val play : (module S) -> Environment.t -> hidden:string -> unit
+
+  val cheat : (module S) -> Environment.t -> unit
 end

@@ -2,21 +2,16 @@ open! Core
 
 type t = { allowed : String.Set.t; sampled : string list }
 
-let import ~allowed_file ~sampled_file ~word_length ~sampled_num =
-  let allowed_words =
-    Wordlist_input.read_words allowed_file
-    |> List.filter ~f:(fun x -> String.length x = word_length)
+let import ~filename ~word_length ~sampled_num =
+  let words_by_freq =
+    Sexp.load_sexps filename
+    |> List.map ~f:[%of_sexp: string * int]
+    |> List.filter ~f:(fun (word, _) -> String.length word = word_length)
   in
-  let sampled_words_dups =
-    Wordlist_input.read_frequent_words sampled_file
-    |> List.filter ~f:(fun x -> String.length x = word_length)
-  in
-  let sampled_words =
-    List.take sampled_words_dups sampled_num
-    |> List.dedup_and_sort ~compare:String.compare
-    |> List.filter ~f:(List.mem allowed_words ~equal:String.equal)
-  in
-  { allowed = String.Set.of_list allowed_words; sampled = sampled_words }
+  print_s [%message (List.length words_by_freq : int)];
+  let allowed = List.map words_by_freq ~f:fst |> String.Set.of_list in
+  let sampled = List.take words_by_freq sampled_num |> List.map ~f:fst in
+  { allowed; sampled }
 
 let allowed_words { allowed; _ } = Set.to_list allowed
 

@@ -27,9 +27,8 @@ let env_parser =
           "the number of words considered as the hidden word (starting as most \
            frequent)"
     in
-    let allowed_file = Filename.concat data_folder "allowed.txt" in
-    let sampled_file = Filename.concat data_folder "sampled.txt" in
-    Environment.import ~allowed_file ~sampled_file ~word_length ~sampled_num)
+    let env_words = Filename.concat data_folder "env_words.txt" in
+    Environment.import ~filename:env_words ~word_length ~sampled_num)
 
 let load_sexp_player filename =
   if String.is_suffix filename ~suffix:".sexp" then
@@ -76,8 +75,40 @@ let make_tree_cmd =
         let tree = Game_tree.make player env in
         Game_tree.sexp_of_t tree |> Sexp.save out_file)
 
+let cheat_cmd =
+  Command.basic ~summary:"Cheat in wordle with a computer player"
+    Command.Let_syntax.(
+      let%map_open env = env_parser
+      and player_name =
+        flag "--player" (required string) ~doc:"the type of player"
+      in
+      fun () ->
+        let player =
+          match player_name with
+          | "entropy" -> (module Entropy_splitter : Player.S)
+          | _ -> Option.value_exn (load_sexp_player player_name)
+        in
+
+        Player.cheat player env)
+
+let adhoc_cmd =
+  Command.basic ~summary:"Ad-hoc command to save the word list in a good format"
+    Command.Let_syntax.(
+      let%map_open allowed =
+        flag "--allowed" (required Filename.arg_type) ~doc:"allowed words file"
+      and sampled =
+        flag "--sampled" (required Filename.arg_type) ~doc:"sampled words file"
+      and out = flag "-o" (required Filename.arg_type) ~doc:"output" in
+      fun () -> Wordlist_input.adhoc_compose ~allowed ~sampled ~out)
+
 let cmd =
   Command.group ~summary:"Wordle_solver"
-    [ ("test", test_cmd); ("play", play_cmd); ("make-tree", make_tree_cmd) ]
+    [
+      ("test", test_cmd);
+      ("play", play_cmd);
+      ("make-tree", make_tree_cmd);
+      ("cheat", cheat_cmd);
+      ("adhoc", adhoc_cmd);
+    ]
 
 let () = Command.run cmd
