@@ -12,10 +12,10 @@ let test_cmd =
 
 let env_parser =
   Command.Let_syntax.(
-    let%map_open data_folder =
-      flag "--data-folder"
-        (optional_with_default "data/" Filename.arg_type)
-        ~doc:"word list folder"
+    let%map_open env_words =
+      flag "--env-words"
+        (optional_with_default "data/env_words.txt" Filename.arg_type)
+        ~doc:"word list file"
     and word_length =
       flag "--word-length"
         (optional_with_default 5 int)
@@ -26,7 +26,6 @@ let env_parser =
           "the number of words considered as the hidden word (starting as most \
            frequent)"
     in
-    let env_words = Filename.concat data_folder "env_words.txt" in
     Environment.import ~filename:env_words ~word_length ~sampled_num)
 
 module Player_type = struct
