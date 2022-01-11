@@ -21,8 +21,7 @@ let env_parser =
         (optional_with_default 5 int)
         ~doc:"word length for the game"
     and sampled_num =
-      flag "--sampled-num"
-        (optional_with_default 2500 int)
+      flag "--sampled-num" (optional int)
         ~doc:
           "the number of words considered as the hidden word (starting as most \
            frequent)"
@@ -72,6 +71,7 @@ let make_tree_cmd =
           | "entropy" -> (module Entropy_splitter : Player.S)
           | _ -> failwith "no such player"
         in
+        print_endline "ok";
         let tree = Game_tree.make player env in
         Game_tree.sexp_of_t tree |> Sexp.save out_file)
 
@@ -101,6 +101,36 @@ let adhoc_cmd =
       and out = flag "-o" (required Filename.arg_type) ~doc:"output" in
       fun () -> Wordlist_input.adhoc_compose ~allowed ~sampled ~out)
 
+module Depths_data = struct
+  type t = { by_depth : string list Int.Map.t }
+
+  let print { by_depth } =
+    Map.to_alist by_depth ~key_order:`Increasing
+    |> List.iter ~f:(fun (d, ws) ->
+           printf "%5d %5d " d (List.length ws);
+           print_s [%sexp (List.take ws 5 : string list)];
+           printf "\n")
+
+  let of_depths depths =
+    let by_depth =
+      Map.fold depths ~init:Int.Map.empty ~f:(fun ~key ~data ->
+          Int.Map.add_multi ~key:data ~data:key)
+    in
+    { by_depth }
+end
+
+let tree_depths_cmd =
+  Command.basic ~summary:"On tree depths"
+    Command.Let_syntax.(
+      let%map_open filename = anon ("tree sexp file" %: Filename.arg_type) in
+      fun () ->
+        Sexp.load_sexp filename |> Game_tree.t_of_sexp |> Game_tree.depths
+        |> Depths_data.of_depths |> Depths_data.print)
+
+let tree_stats_cmd =
+  Command.group ~summary:"Output stats about the game tree"
+    [ ("depths", tree_depths_cmd) ]
+
 let cmd =
   Command.group ~summary:"Wordle_solver"
     [
@@ -109,6 +139,7 @@ let cmd =
       ("make-tree", make_tree_cmd);
       ("cheat", cheat_cmd);
       ("adhoc", adhoc_cmd);
+      ("tree-stats", tree_stats_cmd);
     ]
 
 let () = Command.run cmd

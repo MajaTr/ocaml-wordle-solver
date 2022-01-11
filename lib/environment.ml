@@ -10,7 +10,12 @@ let import ~filename ~word_length ~sampled_num =
   in
   print_s [%message (List.length words_by_freq : int)];
   let allowed = List.map words_by_freq ~f:fst |> String.Set.of_list in
-  let sampled = List.take words_by_freq sampled_num |> List.map ~f:fst in
+  let sampled =
+    Option.value_map sampled_num ~f:(List.take words_by_freq)
+      ~default:words_by_freq
+    |> List.map ~f:fst
+  in
+  print_s [%message (Set.length allowed : int)];
   { allowed; sampled }
 
 let allowed_words { allowed; _ } = Set.to_list allowed

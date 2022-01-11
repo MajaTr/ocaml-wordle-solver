@@ -40,3 +40,17 @@ let to_player t =
           List.find_map_exn next ~f:(fun (label, tree) ->
               if Guess_result.compare result label = 0 then Some tree else None)
   end : Player.S)
+
+let depths t =
+  let upd mp s d =
+    Map.update mp s ~f:(Option.value_map ~f:(Int.min d) ~default:d)
+  in
+  let rec depths_rec d mp t =
+    match t with
+    | Leaf s -> upd mp s d
+    | Branch { guess; next } ->
+        List.map next ~f:snd
+        |> List.fold ~init:(upd mp guess d) ~f:(depths_rec (d + 1))
+  in
+
+  depths_rec 0 String.Map.empty t
