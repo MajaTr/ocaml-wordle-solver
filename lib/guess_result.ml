@@ -2,7 +2,7 @@ open Core
 
 module T = struct
   module Char_result = struct
-    type t = None | Yellow | Green [@@deriving compare, sexp]
+    type t = None | Yellow | Green [@@deriving compare, sexp, equal]
 
     let to_int = function None -> 1 | Yellow -> 2 | Green -> 3
 

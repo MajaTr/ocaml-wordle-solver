@@ -15,16 +15,16 @@ let env_parser =
     let%map_open env_words =
       flag "--env-words"
         (optional_with_default "data/env_words.txt" Filename.arg_type)
-        ~doc:"word list file"
+        ~doc:"FILENAME word list file"
     and word_length =
       flag "--word-length"
         (optional_with_default 5 int)
-        ~doc:"word length for the game"
+        ~doc:"INT word length for the game"
     and sampled_num =
       flag "--sampled-num" (optional int)
         ~doc:
-          "the number of words considered as the hidden word (starting as most \
-           frequent)"
+          "INT the number of words considered as the hidden word (starting as \
+           most frequent)"
     in
     Environment.import ~filename:env_words ~word_length ~sampled_num)
 
@@ -97,8 +97,10 @@ let play_cmd =
       and player_type =
         flag "--player"
           (required Player_type.arg_type)
-          ~doc:"the type of player"
-      and hidden = flag "--hidden" (optional string) ~doc:"the hidden word" in
+          ~doc:"PLAYER the type of player"
+      and hidden =
+        flag "--hidden" (optional string) ~doc:"WORD the hidden word"
+      in
       fun () ->
         let hidden =
           Option.(
@@ -116,9 +118,9 @@ let make_tree_cmd =
       and player_type =
         flag "--player"
           (required Player_type.arg_type)
-          ~doc:"the type of player"
+          ~doc:"PLAYER the type of player"
       and out_file =
-        flag "-o" (required Filename.arg_type) ~doc:"output file"
+        flag "-o" (required Filename.arg_type) ~doc:"FILENAME output file"
       in
       fun () ->
         let tree = Game_tree.make (Player_type.eval player_type) env in
@@ -131,7 +133,7 @@ let cheat_cmd =
       and player_type =
         flag "--player"
           (required Player_type.arg_type)
-          ~doc:"the type of player"
+          ~doc:"PLAYER the type of player"
       in
       fun () -> Player.cheat (Player_type.eval player_type) env)
 
@@ -139,10 +141,14 @@ let adhoc_cmd =
   Command.basic ~summary:"Ad-hoc command to save the word list in a good format"
     Command.Let_syntax.(
       let%map_open allowed =
-        flag "--allowed" (required Filename.arg_type) ~doc:"allowed words file"
+        flag "--allowed"
+          (required Filename.arg_type)
+          ~doc:"FILENAME allowed words file"
       and sampled =
-        flag "--sampled" (required Filename.arg_type) ~doc:"sampled words file"
-      and out = flag "-o" (required Filename.arg_type) ~doc:"output" in
+        flag "--sampled"
+          (required Filename.arg_type)
+          ~doc:"FILENAME sampled words file"
+      and out = flag "-o" (required Filename.arg_type) ~doc:"FILENAME output" in
       fun () -> Wordlist_input.adhoc_compose ~allowed ~sampled ~out)
 
 module Depths_data = struct

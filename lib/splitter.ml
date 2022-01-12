@@ -24,12 +24,10 @@ module Make (M : S) = struct
         guess
 
   let update ~env { sampled } ~guess ~result =
-    (* print_s [%message (result : Guess_result.t) (sampled : string list)];*)
     {
       sampled =
         List.filter sampled ~f:(fun hidden ->
-            Guess_result.compare result
-              (Environment.Word_handle.guess_result ~env ~guess ~hidden)
-            = 0);
+            Guess_result.(
+              result = Environment.Word_handle.guess_result ~env ~guess ~hidden));
     }
 end

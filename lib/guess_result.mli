@@ -1,6 +1,6 @@
 open! Core
 
-type t [@@deriving compare, sexp]
+type t [@@deriving compare, sexp, equal]
 
 val obtain : guess:string -> hidden:string -> t
 
