@@ -11,29 +11,32 @@ let make (module M : Player.S) env =
   let rec make_rec ~sampled state =
     match sampled with
     | [] -> raise (Empty_samples ())
-    | [ hidden ] -> Leaf hidden
+    | [ hidden ] -> Leaf (Environment.Word_handle.to_string hidden ~env)
     | _ ->
-        let guess = M.guess state in
+        let guess = M.guess ~env state in
         let next =
           List.map sampled ~f:(fun hidden ->
-              (Guess_result.obtain guess ~hidden, hidden))
+              (Environment.Word_handle.guess_result ~env ~guess ~hidden, hidden))
           |> Guess_result.Map.of_alist_multi |> Map.to_alist
           |> List.map ~f:(fun (result, sampled) ->
-                 (result, make_rec ~sampled (M.update state ~guess ~result)))
+                 (result, make_rec ~sampled (M.update state ~env ~guess ~result)))
         in
-        Branch { guess; next }
+        Branch { guess = Environment.Word_handle.to_string guess ~env; next }
   in
-  make_rec ~sampled:(Environment.sampled_words env) (M.init env)
+  make_rec ~sampled:(Environment.sampled_words env) (M.init ~env)
 
-let to_player t =
+let to_player init =
   (module struct
     type state = t
 
-    let init _ = t
+    let init ~env:_ = init
 
-    let guess = function Leaf s -> s | Branch { guess; _ } -> guess
+    let guess ~env t =
+      Environment.get_handle env
+        (match t with Leaf s -> s | Branch { guess; _ } -> guess)
+      |> Option.value_exn ~message:"Word not allowed"
 
-    let update t ~guess:_ ~result =
+    let update ~env:_ t ~guess:_ ~result =
       match t with
       | Leaf _ -> t
       | Branch { next; _ } ->

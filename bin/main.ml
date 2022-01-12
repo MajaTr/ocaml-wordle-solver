@@ -100,7 +100,11 @@ let play_cmd =
           ~doc:"the type of player"
       and hidden = flag "--hidden" (optional string) ~doc:"the hidden word" in
       fun () ->
-        let hidden = Option.value hidden ~default:(Environment.sample env) in
+        let hidden =
+          Option.(
+            hidden >>= Environment.get_handle env
+            |> value ~default:(Environment.sample env))
+        in
         Player.play
           (Player_type.eval ~with_printing:true player_type)
           env ~hidden)

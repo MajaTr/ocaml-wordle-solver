@@ -2,13 +2,23 @@ open! Core
 
 type t
 
+type env = t
+
+module Word_handle : sig
+  type t
+
+  val to_string : t -> env:env -> string
+
+  val guess_result : guess:t -> hidden:t -> env:env -> Guess_result.t
+end
+
 val import :
   filename:Filename.t -> word_length:int -> sampled_num:int option -> t
 
-val allowed_words : t -> string list
+val allowed_words : t -> Word_handle.t list
 
-val is_allowed : t -> string -> bool
+val get_handle : t -> string -> Word_handle.t option
 
-val sampled_words : t -> string list
+val sampled_words : t -> Word_handle.t list
 
-val sample : t -> string
+val sample : t -> Word_handle.t

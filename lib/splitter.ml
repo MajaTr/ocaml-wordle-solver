@@ -4,22 +4,18 @@ open Splitter_intf
 module type S = S
 
 module Make (M : S) = struct
-  type state = { sampled : string list; allowed : string list }
+  type state = { sampled : Environment.Word_handle.t list }
 
-  let init env =
-    {
-      sampled = Environment.sampled_words env;
-      allowed = Environment.allowed_words env;
-    }
+  let init ~env = { sampled = Environment.sampled_words env }
 
-  let guess { sampled; allowed } =
+  let guess ~env { sampled } =
     match sampled with
     | [ answer ] -> answer
     | _ ->
         let _, guess =
-          List.map allowed ~f:(fun guess ->
-              ( List.map sampled ~f:(fun x ->
-                    Guess_result.obtain guess ~hidden:x)
+          List.map (Environment.allowed_words env) ~f:(fun guess ->
+              ( List.map sampled ~f:(fun hidden ->
+                    Environment.Word_handle.guess_result ~env ~guess ~hidden)
                 |> M.evaluate,
                 guess ))
           |> List.max_elt ~compare:(fun (x, _) (y, _) -> M.compare x y)
@@ -27,13 +23,13 @@ module Make (M : S) = struct
         in
         guess
 
-  let update { sampled; allowed } ~guess ~result =
+  let update ~env { sampled } ~guess ~result =
     (* print_s [%message (result : Guess_result.t) (sampled : string list)];*)
     {
       sampled =
-        List.filter sampled ~f:(fun w ->
-            Guess_result.compare result (Guess_result.obtain guess ~hidden:w)
+        List.filter sampled ~f:(fun hidden ->
+            Guess_result.compare result
+              (Environment.Word_handle.guess_result ~env ~guess ~hidden)
             = 0);
-      allowed;
     }
 end

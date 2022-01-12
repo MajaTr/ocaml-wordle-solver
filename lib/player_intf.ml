@@ -3,11 +3,16 @@ open! Core
 module type S = sig
   type state
 
-  val init : Environment.t -> state
+  val init : env:Environment.t -> state
 
-  val guess : state -> string
+  val guess : env:Environment.t -> state -> Environment.Word_handle.t
 
-  val update : state -> guess:string -> result:Guess_result.t -> state
+  val update :
+    env:Environment.t ->
+    state ->
+    guess:Environment.Word_handle.t ->
+    result:Guess_result.t ->
+    state
 end
 
 module type Intf = sig
@@ -15,7 +20,8 @@ module type Intf = sig
 
   module With_printing (M : S) : S
 
-  val play : (module S) -> Environment.t -> hidden:string -> unit
+  val play :
+    (module S) -> Environment.t -> hidden:Environment.Word_handle.t -> unit
 
   val cheat : (module S) -> Environment.t -> unit
 end

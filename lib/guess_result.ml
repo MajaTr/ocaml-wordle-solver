@@ -47,7 +47,7 @@ module T = struct
 
   type t = Packed_vector.t [@@deriving compare, sexp]
 
-  let obtain guess ~hidden =
+  let obtain ~guess ~hidden =
     let open Packed_vector in
     let n = String.length guess in
     let e = init n ~f:(fun _ -> None) in

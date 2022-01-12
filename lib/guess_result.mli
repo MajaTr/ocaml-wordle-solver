@@ -2,7 +2,7 @@ open! Core
 
 type t [@@deriving compare, sexp]
 
-val obtain : string -> hidden:string -> t
+val obtain : guess:string -> hidden:string -> t
 
 val guessed : t -> bool
 

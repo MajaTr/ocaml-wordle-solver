@@ -2,8 +2,12 @@ open! Core
 
 type state = unit
 
-let init _ = ()
+let init ~env:_ = ()
 
-let guess () = In_channel.(input_line stdin) |> Option.value_exn
+let guess ~env () =
+  In_channel.(input_line stdin)
+  |> Option.value_exn |> Environment.get_handle env
+  |> Option.value_exn ~message:"Word not allowed"
 
-let update () ~guess:_ ~result = print_endline (Guess_result.to_string result)
+let update ~env:_ () ~guess:_ ~result =
+  print_endline (Guess_result.to_string result)
