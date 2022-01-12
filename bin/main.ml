@@ -32,16 +32,18 @@ module Player_type = struct
   open Option.Let_syntax
 
   module Split = struct
-    type t = Entropy | Max
+    type t = Entropy | Max | Maxlex
 
     let of_string = function
       | "entropy" -> Some Entropy
       | "max" -> Some Max
+      | "maxlex" -> Some Maxlex
       | _ -> None
 
     let eval : t -> (module Splitter.S) = function
       | Entropy -> (module Entropy_split)
       | Max -> (module Max_split)
+      | Maxlex -> (module Max_lex_split)
   end
 
   module Auto = struct

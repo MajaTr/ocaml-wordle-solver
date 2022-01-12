@@ -13,13 +13,13 @@ let make (module M : Player.S) env =
     | [] -> raise (Empty_samples ())
     | [ hidden ] -> Leaf (Environment.Word_handle.to_string hidden ~env)
     | _ ->
-        let guess = M.guess ~env state in
+        let guess, adv_state = M.guess ~env state in
         let next =
           List.map sampled ~f:(fun hidden ->
               (Environment.Word_handle.guess_result ~env ~guess ~hidden, hidden))
           |> Guess_result.Map.of_alist_multi |> Map.to_alist
           |> List.map ~f:(fun (result, sampled) ->
-                 (result, make_rec ~sampled (M.update state ~env ~guess ~result)))
+                 (result, make_rec ~sampled (M.update adv_state ~env ~result)))
         in
         Branch { guess = Environment.Word_handle.to_string guess ~env; next }
   in
@@ -29,14 +29,17 @@ let to_player init =
   (module struct
     type state = t
 
+    type adv_state = t
+
     let init ~env:_ = init
 
     let guess ~env t =
-      Environment.get_handle env
-        (match t with Leaf s -> s | Branch { guess; _ } -> guess)
-      |> Option.value_exn ~message:"Word not allowed"
+      ( Environment.get_handle env
+          (match t with Leaf s -> s | Branch { guess; _ } -> guess)
+        |> Option.value_exn ~message:"Word not allowed",
+        t )
 
-    let update ~env:_ t ~guess:_ ~result =
+    let update ~env:_ t ~result =
       match t with
       | Leaf _ -> t
       | Branch { next; _ } ->

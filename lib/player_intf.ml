@@ -3,16 +3,14 @@ open! Core
 module type S = sig
   type state
 
+  type adv_state
+
   val init : env:Environment.t -> state
 
-  val guess : env:Environment.t -> state -> Environment.Word_handle.t
+  val guess :
+    env:Environment.t -> state -> Environment.Word_handle.t * adv_state
 
-  val update :
-    env:Environment.t ->
-    state ->
-    guess:Environment.Word_handle.t ->
-    result:Guess_result.t ->
-    state
+  val update : env:Environment.t -> adv_state -> result:Guess_result.t -> state
 end
 
 module type Intf = sig
