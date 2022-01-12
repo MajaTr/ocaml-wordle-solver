@@ -63,3 +63,16 @@ let depths t =
   in
 
   depths_rec 0 String.Map.empty t
+
+let rec truncate t ~depth =
+  match (t, depth) with
+  | Branch { guess; _ }, 0 -> Leaf guess
+  | Branch { guess; next }, depth ->
+      Branch
+        {
+          guess;
+          next =
+            List.map next ~f:(fun (result, t') ->
+                (result, truncate t' ~depth:(depth - 1)));
+        }
+  | Leaf s, _ -> Leaf s

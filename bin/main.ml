@@ -182,9 +182,18 @@ let tree_depths_cmd =
 let tree_pp_cmd =
   Command.basic ~summary:"Pretty print the tree"
     Command.Let_syntax.(
-      let%map_open filename = anon ("tree sexp file" %: Filename.arg_type) in
+      let%map_open filename = anon ("tree sexp file" %: Filename.arg_type)
+      and print_depth =
+        flag "--print-depth" (optional int)
+          ~doc:"INT depth of printing the tree"
+      in
       fun () ->
-        Sexp.load_sexp filename |> Sexp.pp_hum Format.std_formatter;
+        Sexp.load_sexp filename |> Game_tree.t_of_sexp
+        |> Option.value_map print_depth
+             ~f:(fun depth tree -> Game_tree.truncate tree ~depth)
+             ~default:Fn.id
+        |> Game_tree.sexp_of_t
+        |> Sexp.pp_hum Format.std_formatter;
         Format.pp_print_flush Format.std_formatter ())
 
 let tree_view_cmd =
