@@ -14,41 +14,17 @@ module T = struct
       | 3 -> Green
       | _ -> raise Out_of_bounds
 
+    let bit_width = 2
+
     let to_char = function None -> '_' | Yellow -> 'Y' | Green -> 'G'
   end
 
-  module Packed_vector = struct
-    type t = int [@@deriving compare, sexp]
+  module Vector = Packed_vector.Make (Char_result)
 
-    let get t i = (t lsr (2 * i)) land 3 |> Char_result.of_int_exn
-
-    (*
-  let set_from_to t i x y =
-    let z = Char_result.to_int x lxor Char_result.to_int y in
-    t lxor (z lsl (2 * i))*)
-
-    let set t i x =
-      let t1 = t land ((1 lsl (2 * i)) - 1) in
-      let t2 = t lsr (2 * i) in
-      let t3 = t2 lxor (t2 land 3) lxor Char_result.to_int x in
-      (t3 lsl (2 * i)) lor t1
-
-    let init n ~f =
-      List.init n ~f |> List.foldi ~init:0 ~f:(fun i t x -> set t i x)
-
-    let rec fold t ~init ~f =
-      match t with
-      | 0 -> init
-      | _ ->
-          fold (t lsr 2) ~init:(f init (t land 3 |> Char_result.of_int_exn)) ~f
-
-    let for_all t ~f = fold t ~init:true ~f:(fun b x -> b && f x)
-  end
-
-  type t = Packed_vector.t [@@deriving compare]
+  type t = Vector.t [@@deriving compare]
 
   let obtain ~guess ~hidden =
-    let open Packed_vector in
+    let open Vector in
     let n = String.length guess in
     let e = init n ~f:(fun _ -> None) in
     let gv_green, hv_green =
@@ -68,16 +44,16 @@ module T = struct
     in
     gv
 
-  let guessed t = Packed_vector.for_all t ~f:(fun x -> Poly.(x = Green))
+  let guessed t = Vector.for_all t ~f:(fun x -> Poly.(x = Green))
 
   let to_string t =
-    Packed_vector.fold t ~init:"" ~f:(fun s x ->
+    Vector.fold t ~init:"" ~f:(fun s x ->
         s ^ (Char_result.to_char x |> Char.to_string))
 
   let of_string s =
     let exception Wrong_letter in
     try
-      Packed_vector.init (String.length s) ~f:(fun i ->
+      Vector.init (String.length s) ~f:(fun i ->
           match s.[i] with
           | '_' -> None
           | 'Y' -> Yellow
@@ -86,7 +62,7 @@ module T = struct
       |> Option.some
     with Wrong_letter -> None
 
-  let to_int t = t
+  let to_int t = Vector.to_int t
 
   let sexp_of_t t = to_string t |> String.sexp_of_t
 
