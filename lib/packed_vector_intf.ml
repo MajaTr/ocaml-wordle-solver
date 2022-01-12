@@ -22,6 +22,8 @@ module type Intf = sig
 
     val init : int -> f:(int -> M.t) -> t
 
+    val to_sequence : t -> M.t Sequence.t
+
     val fold : t -> init:'a -> f:('a -> M.t -> 'a) -> 'a
 
     val for_all : t -> f:(M.t -> bool) -> bool

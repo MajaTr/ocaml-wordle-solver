@@ -4,14 +4,14 @@ module T = struct
   module Char_result = struct
     type t = None | Yellow | Green [@@deriving compare, equal]
 
-    let to_int = function None -> 1 | Yellow -> 2 | Green -> 3
+    let to_int = function None -> 0 | Yellow -> 1 | Green -> 2
 
     exception Out_of_bounds
 
     let of_int_exn = function
-      | 1 -> None
-      | 2 -> Yellow
-      | 3 -> Green
+      | 0 -> None
+      | 1 -> Yellow
+      | 2 -> Green
       | _ -> raise Out_of_bounds
 
     let bit_width = 2
