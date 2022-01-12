@@ -2,7 +2,7 @@ open Core
 
 module T = struct
   module Char_result = struct
-    type t = None | Yellow | Green [@@deriving compare, sexp, equal]
+    type t = None | Yellow | Green [@@deriving compare, equal]
 
     let to_int = function None -> 1 | Yellow -> 2 | Green -> 3
 
@@ -45,7 +45,7 @@ module T = struct
     let for_all t ~f = fold t ~init:true ~f:(fun b x -> b && f x)
   end
 
-  type t = Packed_vector.t [@@deriving compare, sexp]
+  type t = Packed_vector.t [@@deriving compare]
 
   let obtain ~guess ~hidden =
     let open Packed_vector in
@@ -87,6 +87,10 @@ module T = struct
     with Wrong_letter -> None
 
   let to_int t = t
+
+  let sexp_of_t t = to_string t |> String.sexp_of_t
+
+  let t_of_sexp s = String.t_of_sexp s |> of_string |> Option.value_exn
 end
 
 include T

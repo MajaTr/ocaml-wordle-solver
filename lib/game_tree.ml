@@ -15,8 +15,11 @@ let make (module M : Player.S) env =
     | _ ->
         let guess, adv_state = M.guess ~env state in
         let next =
-          List.map sampled ~f:(fun hidden ->
-              (Environment.Word_handle.guess_result ~env ~guess ~hidden, hidden))
+          List.filter_map sampled ~f:(fun hidden ->
+              let result =
+                Environment.Word_handle.guess_result ~env ~guess ~hidden
+              in
+              Option.some_if (not (Guess_result.guessed result)) (result, hidden))
           |> Guess_result.Map.of_alist_multi |> Map.to_alist
           |> List.map ~f:(fun (result, sampled) ->
                  (result, make_rec ~sampled (M.update adv_state ~env ~result)))

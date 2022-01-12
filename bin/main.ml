@@ -179,9 +179,17 @@ let tree_depths_cmd =
         Sexp.load_sexp filename |> Game_tree.t_of_sexp |> Game_tree.depths
         |> Depths_data.of_depths |> Depths_data.print)
 
-let tree_stats_cmd =
-  Command.group ~summary:"Output stats about the game tree"
-    [ ("depths", tree_depths_cmd) ]
+let tree_pp_cmd =
+  Command.basic ~summary:"Pretty print the tree"
+    Command.Let_syntax.(
+      let%map_open filename = anon ("tree sexp file" %: Filename.arg_type) in
+      fun () ->
+        Sexp.load_sexp filename |> Sexp.pp_hum Format.std_formatter;
+        Format.pp_print_flush Format.std_formatter ())
+
+let tree_view_cmd =
+  Command.group ~summary:"View data about the game tree"
+    [ ("depths", tree_depths_cmd); ("pp", tree_pp_cmd) ]
 
 let cmd =
   Command.group ~summary:"Wordle_solver"
@@ -191,7 +199,7 @@ let cmd =
       ("make-tree", make_tree_cmd);
       ("cheat", cheat_cmd);
       ("adhoc", adhoc_cmd);
-      ("tree-stats", tree_stats_cmd);
+      ("tree-view", tree_view_cmd);
     ]
 
 let () = Command.run cmd
