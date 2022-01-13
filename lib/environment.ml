@@ -11,7 +11,7 @@ type t = {
 type env = t
 
 module Word_handle = struct
-  type t = int
+  type t = int [@@deriving compare, hash, equal, sexp]
 
   let to_string t ~env:{ allowed; _ } = Array.Permissioned.get allowed t
 

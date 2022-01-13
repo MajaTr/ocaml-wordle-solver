@@ -21,7 +21,7 @@ module T = struct
 
   module Vector = Packed_vector.Make (Char_result)
 
-  type t = Vector.t [@@deriving compare]
+  type t = Vector.t [@@deriving compare, hash, equal]
 
   let obtain ~guess ~hidden =
     let open Vector in

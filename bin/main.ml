@@ -47,18 +47,23 @@ module Player_type = struct
   end
 
   module Auto = struct
-    type t = Split of Split.t
+    type t = Split of Split.t | Full
 
     let of_string s =
-      match%bind String.lsplit2 s ~on:'-' with
-      | "split", tail ->
-          let%map split = Split.of_string tail in
-          Split split
-      | _, _ -> None
+      List.fold ~init:None ~f:Option.first_some
+        [
+          (match s with "full" -> Some Full | _ -> None);
+          (match%bind String.lsplit2 s ~on:'-' with
+          | "split", tail ->
+              let%map split = Split.of_string tail in
+              Split split
+          | _, _ -> None);
+        ]
 
     let eval = function
       | Split split ->
           (module Splitter.Make ((val Split.eval split)) : Player.S)
+      | Full -> (module Full_solver)
   end
 
   type t = Human | Auto of Auto.t | Sexp of Filename.t

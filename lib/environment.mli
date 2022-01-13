@@ -5,7 +5,7 @@ type t
 type env = t
 
 module Word_handle : sig
-  type t
+  type t [@@deriving compare, hash, equal, sexp]
 
   val to_string : t -> env:env -> string
 
