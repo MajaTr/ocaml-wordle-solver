@@ -1,7 +1,8 @@
 open! Core
 
 type t =
-  | Leaf of string
+  | Done
+  | Final of string
   | Branch of { guess : string; next : (Guess_result.t * t) list }
 [@@deriving sexp]
 
@@ -11,18 +12,17 @@ let make (module M : Player.S) env =
   let rec make_rec ~sampled state =
     match sampled with
     | [] -> raise (Empty_samples ())
-    | [ hidden ] -> Leaf (Environment.Word_handle.to_string hidden ~env)
+    | [ hidden ] -> Final (Environment.Word_handle.to_string hidden ~env)
     | _ ->
         let guess, adv_state = M.guess ~env state in
         let next =
-          List.filter_map sampled ~f:(fun hidden ->
-              let result =
-                Environment.Word_handle.guess_result ~env ~guess ~hidden
-              in
-              Option.some_if (not (Guess_result.guessed result)) (result, hidden))
+          List.map sampled ~f:(fun hidden ->
+              (Environment.Word_handle.guess_result ~env ~guess ~hidden, hidden))
           |> Guess_result.Map.of_alist_multi |> Map.to_alist
           |> List.map ~f:(fun (result, sampled) ->
-                 (result, make_rec ~sampled (M.update adv_state ~env ~result)))
+                 ( result,
+                   if Guess_result.guessed result then Done
+                   else make_rec ~sampled (M.update adv_state ~env ~result) ))
         in
         Branch { guess = Environment.Word_handle.to_string guess ~env; next }
   in
@@ -36,37 +36,45 @@ let to_player init =
 
     let init ~env:_ = init
 
+    exception Tree_end
+
     let guess ~env t =
-      ( Environment.get_handle env
-          (match t with Leaf s -> s | Branch { guess; _ } -> guess)
+      let guess =
+        match t with
+        | Done -> raise Tree_end
+        | Final s -> s
+        | Branch { guess; _ } -> guess
+      in
+      ( Environment.get_handle env guess
         |> Option.value_exn ~message:"Word not allowed",
         t )
 
     let update ~env:_ t ~result =
       match t with
-      | Leaf _ -> t
+      | Done | Final _ -> t
       | Branch { next; _ } ->
           List.find_map_exn next ~f:(fun (label, tree) ->
               if Guess_result.compare result label = 0 then Some tree else None)
   end : Player.S)
 
 let depths t =
-  let upd mp s d =
-    Map.update mp s ~f:(Option.value_map ~f:(Int.min d) ~default:d)
-  in
+  let upd mp s d = Map.add_exn mp ~key:s ~data:d in
   let rec depths_rec d mp t =
     match t with
-    | Leaf s -> upd mp s d
+    | Done -> mp
+    | Final s -> upd mp s d
     | Branch { guess; next } ->
         List.map next ~f:snd
-        |> List.fold ~init:(upd mp guess d) ~f:(depths_rec (d + 1))
+        |> List.fold ~init:mp ~f:(fun mp -> function
+             | Done -> upd mp guess d
+             | (Final _ | Branch _) as t -> depths_rec (d + 1) mp t)
   in
 
   depths_rec 0 String.Map.empty t
 
 let rec truncate t ~depth =
   match (t, depth) with
-  | Branch { guess; _ }, 0 -> Leaf guess
+  | Branch { guess; _ }, 0 -> Final guess
   | Branch { guess; next }, depth ->
       Branch
         {
@@ -75,4 +83,4 @@ let rec truncate t ~depth =
             List.map next ~f:(fun (result, t') ->
                 (result, truncate t' ~depth:(depth - 1)));
         }
-  | Leaf s, _ -> Leaf s
+  | ((Final _ | Done) as t), _ -> t
