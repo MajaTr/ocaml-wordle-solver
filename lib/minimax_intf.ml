@@ -37,9 +37,9 @@ module type Game = sig
 end
 
 module type Params = sig
-  val depth : int
+  val ply_depth : int
 
-  val breadth : int
+  val move_breadth : int
 end
 
 module type Intf = sig

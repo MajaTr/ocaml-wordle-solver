@@ -66,25 +66,31 @@ module Make (M : Game) (P : Params) = struct
     in
     (Option.value_exn value, maybe_move)
 
-  let rec solve ~(pruning : Pruning.t) state =
-    match state with
-    | First state ->
-        Sequence.take (M.moves state) P.breadth
-        |> sequence_fold ~player:Player ~apply:M.apply ~other_solve:adv_solve
+  let rec solve ~(pruning : Pruning.t) ~ply_left state =
+    match (ply_left, state) with
+    | _, Second final_state -> (M.final_eval final_state, None)
+    | 0, First state -> (M.eval state, None)
+    | _, First state ->
+        Sequence.take (M.moves state) P.move_breadth
+        |> sequence_fold ~player:Player ~apply:M.apply
+             ~other_solve:(adv_solve ~ply_left:(ply_left - 1))
              ~state ~pruning
-    | Second final_state -> (M.final_eval final_state, None)
 
-  and adv_solve ~(pruning : Pruning.t) adv_state =
-    Sequence.take (M.adv_moves adv_state) P.breadth
-    |> sequence_fold ~player:Adversary ~apply:M.adv_apply ~other_solve:solve
-         ~state:adv_state ~pruning
+  and adv_solve ~(pruning : Pruning.t) ~ply_left adv_state =
+    match ply_left with
+    | 0 -> (M.adv_eval adv_state, None)
+    | _ ->
+        Sequence.take (M.adv_moves adv_state) P.move_breadth
+        |> sequence_fold ~player:Adversary ~apply:M.adv_apply
+             ~other_solve:(solve ~ply_left:(ply_left - 1))
+             ~state:adv_state ~pruning
 
   exception Game_end
 
   exception No_moves
 
   let guess ~env:_ state =
-    let _, move = solve ~pruning:Pruning.init state in
+    let _, move = solve ~pruning:Pruning.init ~ply_left:P.ply_depth state in
     match (state, move) with
     | First state, Some move -> (M.guess_of_move move, M.apply state move)
     | Second _, _ -> raise Game_end
